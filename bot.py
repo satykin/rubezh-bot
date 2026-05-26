@@ -1,9 +1,14 @@
 import asyncio
 import logging
 import os
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart, F
+
+# 👇 ВОТ ЭТОТ БЛОК ЗАМЕНИ ПОЛНОСТЬЮ 👇
+from aiogram import Bot, Dispatcher, F, types
+from aiogram.filters import CommandStart
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+# 👆 КОНЕЦ БЛОКА 👆
+
+# Остальной код оставляй как есть (токен, клавиатуры и т.д.)
 
 # 1. Получаем токен
 TOKEN = os.getenv("BOT_TOKEN")
