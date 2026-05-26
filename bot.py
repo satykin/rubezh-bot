@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, F
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 # 1. Получаем токен
@@ -12,6 +12,9 @@ if not TOKEN:
     print("❌ ОШИБКА: Токен не найден!")
     exit(1)
 
+print(f"✅ Найден: BOT_TOKEN = {TOKEN[:15]}...")
+print(f"✅ Запуск бота с токеном: {TOKEN[:10]}...")
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
@@ -20,13 +23,13 @@ dp = Dispatcher()
 # Главное меню (Reply - кнопки под полем ввода)
 main_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="📊 Трекинг"), KeyboardButton(text="🛠 Инструменты")],
-    [KeyboardButton(text=" Голос")]
+    [KeyboardButton(text="🎙 Голос")]
 ], resize_keyboard=True)
 
 # Меню для трекинга (Inline - кнопки внутри сообщения)
 mood_kb = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🔋 Энергия на нуле", callback_data="mood_low")],
-    [InlineKeyboardButton(text=" Раздражен/Злость", callback_data="mood_angry")],
+    [InlineKeyboardButton(text="😡 Раздражен/Злость", callback_data="mood_angry")],
     [InlineKeyboardButton(text="😐 Норм/Ровно", callback_data="mood_normal")],
     [InlineKeyboardButton(text="💪 В ресурсе", callback_data="mood_good")]
 ])
@@ -36,14 +39,14 @@ mood_kb = InlineKeyboardMarkup(inline_keyboard=[
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message):
     await message.answer(
-        " *Привет. Это Рубеж.*\n\n"
+        "👋 *Привет. Это Рубеж.*\n\n"
         "Здесь не будет соплей. Только работа.\n"
         "Нажми 'Трекинг', чтобы зафиксировать состояние.",
         reply_markup=main_kb,
         parse_mode="Markdown"
     )
 
-@dp.message(types.F.text == "📊 Трекинг")
+@dp.message(F.text == "📊 Трекинг")
 async def cmd_track(message: types.Message):
     await message.answer(
         "Фиксируем состояние. Что сейчас?\n"
@@ -71,13 +74,13 @@ async def process_mood(callback_query: types.CallbackQuery):
     await callback_query.answer() # Убираем часики загрузки
 
 # Заглушки для других кнопок
-@dp.message(types.F.text == "🛠 Инструменты")
+@dp.message(F.text == "🛠 Инструменты")
 async def cmd_tools(message: types.Message):
-    await message.answer(" В разработке. Скоро будет.")
+    await message.answer("🚧 В разработке. Скоро будет.")
 
-@dp.message(types.F.text == "🎙 Голос")
+@dp.message(F.text == "🎙 Голос")
 async def cmd_voice(message: types.Message):
-    await message.answer(" В разработке. Скоро будет.")
+    await message.answer("🚧 В разработке. Скоро будет.")
 
 # --- ЗАПУСК ---
 async def main():
