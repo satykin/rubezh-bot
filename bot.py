@@ -4,7 +4,20 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 import asyncio
 import os
 
-TOKEN = os.getenv("BOT_TOKEN")  # Токен берем из переменных окружения
+# Отладка: покажи все переменные окружения
+print("🔍 ВСЕ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ:")
+for key, value in os.environ.items():
+    if "TOKEN" in key.upper():
+        print(f"✅ Найдено: {key} = {value[:15]}...")
+
+TOKEN = os.getenv("BOT_TOKEN")
+
+if not TOKEN:
+    print("❌ ОШИБКА: BOT_TOKEN = None")
+    print("📋 Доступные переменные:", list(os.environ.keys()))
+    exit(1)
+
+print(f"✅ Запуск бота с токеном: {TOKEN[:10]}...")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -16,13 +29,7 @@ kb = ReplyKeyboardMarkup(keyboard=[
 
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message):
-    await message.answer(
-        "👋 *Привет. Это Рубеж.*\n\n"
-        "Здесь не будет мотивационных соплей.\n\n"
-        "Как ты сейчас?",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
+    await message.answer("👋 *Привет. Это Рубеж.*", parse_mode="Markdown")
 
 async def main():
     await dp.start_polling(bot)
