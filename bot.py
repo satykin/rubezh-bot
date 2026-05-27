@@ -20,8 +20,6 @@ if not TOKEN or not WEBHOOK_URL:
     print("❌ Ошибка конфигурации")
     sys.exit(1)
 
-print(f"✅ Webhook URL: {WEBHOOK_URL}")
-
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
@@ -99,6 +97,36 @@ async def process_mood(callback: types.CallbackQuery):
     await bot.send_message(user_id, f"*{text}*", parse_mode="Markdown")
     await callback.answer("Сохранено ✓")
 
+# ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+@dp.message(F.text.contains("Статистика"))   # Более надёжный вариант
+async def cmd_stats(message: types.Message):
+    user_id = message.from_user.id
+    stats = get_user_stats(user_id)
+    
+    print(f"📊 Запрос статистики от {user_id}. Найдено записей: {len(stats)}")  # Debug
+
+    if not stats:
+        await message.answer("📊 Пока нет данных. Начни трекинг!")
+        return
+    
+    mood_names = {
+        'low': '🔋 Низкая энергия',
+        'angry': '😡 Раздражение',
+        'normal': '😐 Норм',
+        'good': '💪 В ресурсе'
+    }
+    
+    text = "*Твоя статистика:*\n\n"
+    for mood, count in stats:
+        name = mood_names.get(mood, mood)
+        text += f"{name}: {count} раз(а)\n"
+    
+    await message.answer(text, parse_mode="Markdown")
+
+@dp.message(F.text == "🛠 Инструменты")
+async def cmd_tools(message: types.Message):
+    await message.answer("🚧 В разработке. Скоро будет.")
+
 @dp.message()
 async def unknown(message: types.Message):
     await message.answer("Используй кнопки меню 👇", reply_markup=main_kb)
@@ -106,7 +134,7 @@ async def unknown(message: types.Message):
 # ===================== WEBHOOK =====================
 async def on_startup():
     await bot.delete_webhook(drop_pending_updates=True)
-    await bot.set_webhook(WEBHOOK_URL)   # Без /webhook в конце
+    await bot.set_webhook(WEBHOOK_URL)
     print(f"✅ Webhook установлен → {WEBHOOK_URL}")
 
 async def main():
@@ -114,10 +142,7 @@ async def main():
     dp.startup.register(on_startup)
 
     app = web.Application()
-    
-    # Регистрируем обработчик на корневом пути "/"
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/")
-    
     setup_application(app, dp, bot=bot)
 
     runner = web.AppRunner(app)
@@ -125,7 +150,7 @@ async def main():
     site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
     await site.start()
     
-    print(f"🚀 Бот запущен и слушает на / (root)")
+    print(f"🚀 Бот запущен")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
