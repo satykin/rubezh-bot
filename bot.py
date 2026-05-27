@@ -3,7 +3,6 @@ import logging
 import os
 import sqlite3
 import sys
-import signal
 from datetime import datetime
 
 from aiohttp import web
@@ -14,19 +13,16 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 
 # ===================== КОНФИГУРАЦИЯ =====================
 TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST")   # ← Основная переменная
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")          # ← Используем то, что есть в Railway
 PORT = int(os.getenv("PORT", 8080))
 
 if not TOKEN:
     print("❌ ОШИБКА: BOT_TOKEN не найден!")
     sys.exit(1)
 
-if not WEBHOOK_HOST:
-    print("❌ ОШИБКА: WEBHOOK_HOST не найден!")
+if not WEBHOOK_URL:
+    print("❌ ОШИБКА: WEBHOOK_URL не найден!")
     sys.exit(1)
-
-WEBHOOK_PATH = "/webhook"
-WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 
 print(f"✅ Запуск Rubezh (Webhook)")
 print(f"🌍 Порт: {PORT}")
@@ -112,17 +108,21 @@ async def process_mood(callback: types.CallbackQuery):
     
     await callback.message.edit_text("✅ Состояние зафиксировано")
     await bot.send_message(user_id, f"*{text}*", parse_mode="Markdown")
-    await callback.answer()
+    await callback.answer("Сохранено")
 
 @dp.message(F.text == "📈 Статистика")
 async def cmd_stats(message: types.Message):
     stats = get_user_stats(message.from_user.id)
     if not stats:
-        await message.answer("📊 Пока нет данных.")
+        await message.answer("📊 Пока нет данных. Начни трекинг!")
         return
     
-    mood_names = {'low': '🔋 Низкая энергия', 'angry': '😡 Раздражение', 
-                  'normal': '😐 Норм', 'good': '💪 В ресурсе'}
+    mood_names = {
+        'low': '🔋 Низкая энергия',
+        'angry': '😡 Раздражение',
+        'normal': '😐 Норм',
+        'good': '💪 В ресурсе'
+    }
     
     text = "*Твоя статистика:*\n\n"
     for mood, count in stats:
@@ -130,11 +130,15 @@ async def cmd_stats(message: types.Message):
         text += f"{name}: {count} раз(а)\n"
     await message.answer(text, parse_mode="Markdown")
 
+@dp.message()
+async def unknown(message: types.Message):
+    await message.answer("Используй кнопки меню 👇", reply_markup=main_kb)
+
 # ===================== WEBHOOK =====================
 async def on_startup(bot: Bot):
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.set_webhook(WEBHOOK_URL)
-    print(f"✅ Webhook установлен: {WEBHOOK_URL}")
+    print(f"✅ Webhook успешно установлен на {WEBHOOK_URL}")
 
 # ===================== ЗАПУСК =====================
 async def main():
@@ -143,16 +147,15 @@ async def main():
     dp.startup.register(lambda: on_startup(bot))
 
     app = web.Application()
-    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
+    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
 
     runner = web.AppRunner(app)
     await runner.setup()
-    
     site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
     await site.start()
     
-    print(f"🚀 Бот запущен на {WEBHOOK_URL}")
+    print(f"🚀 Бот запущен и ожидает запросы...")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
