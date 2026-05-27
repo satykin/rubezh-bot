@@ -16,21 +16,16 @@ TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 PORT = int(os.getenv("PORT", 8080))
 
-# --- DEBUG ---
-print("🔍 DEBUG ENVIRONMENT VARIABLES:")
-print(f"BOT_TOKEN: {'✅ Найден' if TOKEN else '❌ Не найден'}")
+print("🔍 DEBUG ENVIRONMENT:")
+print(f"BOT_TOKEN: {'✅ Найден' if TOKEN else '❌ Нет'}")
 print(f"WEBHOOK_URL: {WEBHOOK_URL}")
 print(f"PORT: {PORT}")
 
-if not TOKEN:
-    print("❌ ОШИБКА: BOT_TOKEN не найден!")
+if not TOKEN or not WEBHOOK_URL:
+    print("❌ Критическая ошибка: TOKEN или WEBHOOK_URL отсутствует")
     sys.exit(1)
 
-if not WEBHOOK_URL:
-    print("❌ ОШИБКА: WEBHOOK_URL не найден! Добавь переменную в Railway.")
-    sys.exit(1)
-
-print(f"✅ Webhook URL загружен: {WEBHOOK_URL}")
+print(f"✅ Конфигурация OK. Webhook: {WEBHOOK_URL}")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -109,17 +104,19 @@ async def process_mood(callback: types.CallbackQuery):
     
     await callback.message.edit_text("✅ Состояние зафиксировано")
     await bot.send_message(user_id, f"*{text}*", parse_mode="Markdown")
-    await callback.answer()
+    await callback.answer("Сохранено ✓")
 
 # ===================== WEBHOOK =====================
-async def on_startup(bot: Bot):
+async def on_startup():
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.set_webhook(WEBHOOK_URL)
-    print(f"✅ Webhook установлен: {WEBHOOK_URL}")
+    print(f"✅ Webhook успешно установлен → {WEBHOOK_URL}")
 
 async def main():
     logging.basicConfig(level=logging.INFO)
-    dp.startup.register(lambda: on_startup(bot))
+
+    # Правильная регистрация startup
+    dp.startup.register(on_startup)
 
     app = web.Application()
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
@@ -127,10 +124,11 @@ async def main():
 
     runner = web.AppRunner(app)
     await runner.setup()
+    
     site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
     await site.start()
     
-    print(f"🚀 Бот успешно запущен на порту {PORT}")
+    print(f"🚀 Бот успешно запущен на порту {PORT} и готов к работе!")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
