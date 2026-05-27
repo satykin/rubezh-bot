@@ -101,12 +101,12 @@ async def process_mood(callback: types.CallbackQuery):
 
 @dp.message()
 async def unknown(message: types.Message):
-    await message.answer("Используй кнопки 👇", reply_markup=main_kb)
+    await message.answer("Используй кнопки меню 👇", reply_markup=main_kb)
 
 # ===================== WEBHOOK =====================
 async def on_startup():
     await bot.delete_webhook(drop_pending_updates=True)
-    await bot.set_webhook(WEBHOOK_URL, allowed_updates=dp.resolve_used_update_types())
+    await bot.set_webhook(WEBHOOK_URL)   # Без /webhook в конце
     print(f"✅ Webhook установлен → {WEBHOOK_URL}")
 
 async def main():
@@ -114,7 +114,10 @@ async def main():
     dp.startup.register(on_startup)
 
     app = web.Application()
-    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
+    
+    # Регистрируем обработчик на корневом пути "/"
+    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/")
+    
     setup_application(app, dp, bot=bot)
 
     runner = web.AppRunner(app)
@@ -122,7 +125,7 @@ async def main():
     site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
     await site.start()
     
-    print(f"🚀 Бот запущен на {WEBHOOK_URL}/webhook")
+    print(f"🚀 Бот запущен и слушает на / (root)")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
