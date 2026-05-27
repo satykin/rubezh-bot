@@ -16,16 +16,11 @@ TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 PORT = int(os.getenv("PORT", 8080))
 
-print("🔍 DEBUG ENVIRONMENT:")
-print(f"BOT_TOKEN: {'✅ Найден' if TOKEN else '❌ Нет'}")
-print(f"WEBHOOK_URL: {WEBHOOK_URL}")
-print(f"PORT: {PORT}")
-
 if not TOKEN or not WEBHOOK_URL:
-    print("❌ Критическая ошибка: TOKEN или WEBHOOK_URL отсутствует")
+    print("❌ Ошибка конфигурации")
     sys.exit(1)
 
-print(f"✅ Конфигурация OK. Webhook: {WEBHOOK_URL}")
+print(f"✅ Webhook URL: {WEBHOOK_URL}")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -48,17 +43,15 @@ def init_db():
 def save_mood(user_id, mood):
     conn = sqlite3.connect('rubezh.db')
     timestamp = datetime.now().isoformat()
-    conn.execute(
-        'INSERT INTO tracking (user_id, mood, timestamp) VALUES (?, ?, ?)',
-        (user_id, mood, timestamp)
-    )
+    conn.execute('INSERT INTO tracking (user_id, mood, timestamp) VALUES (?, ?, ?)', 
+                 (user_id, mood, timestamp))
     conn.commit()
     conn.close()
 
 def get_user_stats(user_id):
     conn = sqlite3.connect('rubezh.db')
     cursor = conn.execute(
-        'SELECT mood, COUNT(*) as count FROM tracking WHERE user_id = ? GROUP BY mood',
+        'SELECT mood, COUNT(*) as count FROM tracking WHERE user_id = ? GROUP BY mood', 
         (user_id,)
     )
     return cursor.fetchall()
@@ -106,16 +99,18 @@ async def process_mood(callback: types.CallbackQuery):
     await bot.send_message(user_id, f"*{text}*", parse_mode="Markdown")
     await callback.answer("Сохранено ✓")
 
+@dp.message()
+async def unknown(message: types.Message):
+    await message.answer("Используй кнопки 👇", reply_markup=main_kb)
+
 # ===================== WEBHOOK =====================
 async def on_startup():
     await bot.delete_webhook(drop_pending_updates=True)
-    await bot.set_webhook(WEBHOOK_URL)
-    print(f"✅ Webhook успешно установлен → {WEBHOOK_URL}")
+    await bot.set_webhook(WEBHOOK_URL, allowed_updates=dp.resolve_used_update_types())
+    print(f"✅ Webhook установлен → {WEBHOOK_URL}")
 
 async def main():
     logging.basicConfig(level=logging.INFO)
-
-    # Правильная регистрация startup
     dp.startup.register(on_startup)
 
     app = web.Application()
@@ -124,11 +119,10 @@ async def main():
 
     runner = web.AppRunner(app)
     await runner.setup()
-    
     site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
     await site.start()
     
-    print(f"🚀 Бот успешно запущен на порту {PORT} и готов к работе!")
+    print(f"🚀 Бот запущен на {WEBHOOK_URL}/webhook")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
