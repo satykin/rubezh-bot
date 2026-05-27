@@ -13,20 +13,24 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 
 # ===================== КОНФИГУРАЦИЯ =====================
 TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")          # ← Используем то, что есть в Railway
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 PORT = int(os.getenv("PORT", 8080))
+
+# --- DEBUG ---
+print("🔍 DEBUG ENVIRONMENT VARIABLES:")
+print(f"BOT_TOKEN: {'✅ Найден' if TOKEN else '❌ Не найден'}")
+print(f"WEBHOOK_URL: {WEBHOOK_URL}")
+print(f"PORT: {PORT}")
 
 if not TOKEN:
     print("❌ ОШИБКА: BOT_TOKEN не найден!")
     sys.exit(1)
 
 if not WEBHOOK_URL:
-    print("❌ ОШИБКА: WEBHOOK_URL не найден!")
+    print("❌ ОШИБКА: WEBHOOK_URL не найден! Добавь переменную в Railway.")
     sys.exit(1)
 
-print(f"✅ Запуск Rubezh (Webhook)")
-print(f"🌍 Порт: {PORT}")
-print(f"🔗 Webhook URL: {WEBHOOK_URL}")
+print(f"✅ Webhook URL загружен: {WEBHOOK_URL}")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -82,11 +86,8 @@ mood_kb = InlineKeyboardMarkup(inline_keyboard=[
 # ===================== ХЕНДЛЕРЫ =====================
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message):
-    await message.answer(
-        "👋 *Привет. Это Рубеж.*\n\nЗдесь не будет соплей. Только работа.",
-        reply_markup=main_kb,
-        parse_mode="Markdown"
-    )
+    await message.answer("👋 *Привет. Это Рубеж.*\n\nЗдесь не будет соплей. Только работа.", 
+                        reply_markup=main_kb, parse_mode="Markdown")
 
 @dp.message(F.text == "📊 Трекинг")
 async def cmd_track(message: types.Message):
@@ -100,7 +101,7 @@ async def process_mood(callback: types.CallbackQuery):
 
     responses = {
         'low': "Низкая энергия. Дыши глубже.",
-        'angry': "Злость — это топливо. Направь её в дело.",
+        'angry': "Злость — это топливо.",
         'normal': "Ровный фон. Держи ритм.",
         'good': "Отлично. Фиксируем ресурс."
     }
@@ -108,42 +109,16 @@ async def process_mood(callback: types.CallbackQuery):
     
     await callback.message.edit_text("✅ Состояние зафиксировано")
     await bot.send_message(user_id, f"*{text}*", parse_mode="Markdown")
-    await callback.answer("Сохранено")
-
-@dp.message(F.text == "📈 Статистика")
-async def cmd_stats(message: types.Message):
-    stats = get_user_stats(message.from_user.id)
-    if not stats:
-        await message.answer("📊 Пока нет данных. Начни трекинг!")
-        return
-    
-    mood_names = {
-        'low': '🔋 Низкая энергия',
-        'angry': '😡 Раздражение',
-        'normal': '😐 Норм',
-        'good': '💪 В ресурсе'
-    }
-    
-    text = "*Твоя статистика:*\n\n"
-    for mood, count in stats:
-        name = mood_names.get(mood, mood)
-        text += f"{name}: {count} раз(а)\n"
-    await message.answer(text, parse_mode="Markdown")
-
-@dp.message()
-async def unknown(message: types.Message):
-    await message.answer("Используй кнопки меню 👇", reply_markup=main_kb)
+    await callback.answer()
 
 # ===================== WEBHOOK =====================
 async def on_startup(bot: Bot):
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.set_webhook(WEBHOOK_URL)
-    print(f"✅ Webhook успешно установлен на {WEBHOOK_URL}")
+    print(f"✅ Webhook установлен: {WEBHOOK_URL}")
 
-# ===================== ЗАПУСК =====================
 async def main():
     logging.basicConfig(level=logging.INFO)
-
     dp.startup.register(lambda: on_startup(bot))
 
     app = web.Application()
@@ -155,7 +130,7 @@ async def main():
     site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
     await site.start()
     
-    print(f"🚀 Бот запущен и ожидает запросы...")
+    print(f"🚀 Бот успешно запущен на порту {PORT}")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
